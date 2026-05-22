@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Easy Delivery Finance</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ── Reset & Base ───────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       var(--tg-theme-bg-color,           #111827);
+  --bg2:      var(--tg-theme-secondary-bg-color, #1f2937);
+  --text:     var(--tg-theme-text-color,         #f9fafb);
+  --hint:     var(--tg-theme-hint-color,         #9ca3af);
+  --link:     var(--tg-theme-link-color,         #60a5fa);
+  --btn:      var(--tg-theme-button-color,       #3b82f6);
+  --btn-text: var(--tg-theme-button-text-color,  #ffffff);
+  --green: #34d399;
+  --red:   #f87171;
+  --blue:  #60a5fa;
+  --amber: #fbbf24;
+  --border: rgba(255,255,255,.08);
+  --radius: 14px;
+  --radius-sm: 8px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+  padding-bottom: 72px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Bottom Nav ────────────────────────────────────────── */
+.nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 60px;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  display: flex;
+  z-index: 200;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  background: none; border: none; color: var(--hint);
+  font-size: 10px; font-weight: 500; cursor: pointer;
+  transition: color .15s; padding: 6px 0;
+}
+.nav-btn svg { width: 22px; height: 22px; }
+.nav-btn.active { color: var(--btn); }
+
+/* ── Pages ─────────────────────────────────────────────── */
+.page { display: none; padding: 16px; animation: fadeIn .18s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+
+/* ── Cards ─────────────────────────────────────────────── */
+.card {
+  background: var(--bg2);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.card-title {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--hint); margin-bottom: 12px;
+}
+
+/* ── Stat grid ─────────────────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.stat {
+  background: var(--bg2);
+  border-radius: var(--radius);
+  padding: 14px 12px;
+  text-align: center;
+}
+.stat .val { font-size: 22px; font-weight: 700; line-height: 1.1; }
+.stat .lbl { font-size: 11px; color: var(--hint); margin-top: 3px; }
+
+/* ── Colors ────────────────────────────────────────────── */
+.c-green { color: var(--green); }
+.c-red   { color: var(--red);   }
+.c-blue  { color: var(--blue);  }
+.c-amber { color: var(--amber); }
+.c-hint  { color: var(--hint);  }
+
+/* ── Chart ─────────────────────────────────────────────── */
+.chart-wrap { height: 190px; position: relative; }
+
+/* ── Section title ─────────────────────────────────────── */
+h2 {
+  font-size: 15px; font-weight: 700;
+  margin: 20px 0 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+h2:first-child { margin-top: 0; }
+
+/* ── Deal kanban ───────────────────────────────────────── */
+.kanban-scroll { overflow-x: auto; margin: 0 -16px; padding: 0 16px 8px; }
+.kanban { display: flex; gap: 10px; width: max-content; }
+.kanban-col {
+  width: 220px;
+  background: var(--bg2);
+  border-radius: var(--radius);
+  padding: 12px;
+  flex-shrink: 0;
+}
+.kanban-col-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--hint); margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.deal-card {
+  background: rgba(255,255,255,.05);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+}
+.deal-card.cargo  { border-color: var(--blue); }
+.deal-card.air    { border-color: var(--amber); }
+.deal-card.closed { border-color: var(--green); opacity: .65; }
+.deal-id   { font-size: 11px; color: var(--hint); }
+.deal-name { font-weight: 600; font-size: 13px; margin: 2px 0 4px; }
+.deal-status { font-size: 10px; color: var(--hint); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.progress-bar { height: 4px; background: rgba(255,255,255,.1); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 2px; background: var(--green); }
+.deal-nums {
+  display: flex; justify-content: space-between;
+  font-size: 11px; margin-top: 5px;
+}
+
+/* ── Settlements ────────────────────────────────────────── */
+.party-card {
+  background: var(--bg2); border-radius: var(--radius); padding: 14px; margin-bottom: 10px;
+}
+.party-head { display: flex; justify-content: space-between; align-items: center; }
+.party-name { font-weight: 700; font-size: 15px; }
+.party-amounts { display: flex; gap: 14px; margin-top: 6px; font-size: 12px; }
+.debt-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-top: 1px solid var(--border); font-size: 12px; }
+.debt-meta { color: var(--hint); font-size: 11px; margin-top: 1px; }
+
+/* ── Personal transactions ──────────────────────────────── */
+.tx-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.tx-row:last-child { border-bottom: none; }
+.tx-cat  { font-weight: 500; }
+.tx-date { font-size: 11px; color: var(--hint); margin-top: 1px; }
+.tx-amt  { font-weight: 700; white-space: nowrap; }
+
+/* ── Badge ──────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center;
+  font-size: 11px; font-weight: 600;
+  padding: 3px 8px; border-radius: 20px;
+}
+.badge-green { background: rgba(52,211,153,.15); color: var(--green); }
+.badge-red   { background: rgba(248,113,113,.15); color: var(--red);   }
+.badge-blue  { background: rgba(96,165,250,.15);  color: var(--blue);  }
+
+/* ── Button ─────────────────────────────────────────────── */
+.btn {
+  display: block; width: 100%; padding: 12px;
+  background: var(--btn); color: var(--btn-text);
+  border: none; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: opacity .15s;
+}
+.btn:active { opacity: .8; }
+.btn-sm { display: inline-block; width: auto; padding: 6px 12px; font-size: 12px; }
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--btn);
+  color: var(--btn);
+}
+
+/* ── Loader / Error ─────────────────────────────────────── */
+.center { text-align: center; padding: 48px 16px; }
+.center svg { width: 40px; height: 40px; margin-bottom: 12px; }
+.center p { color: var(--hint); margin-top: 6px; font-size: 13px; }
+
+/* ── Divider ────────────────────────────────────────────── */
+.divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+/* ── Scroll fixes ───────────────────────────────────────── */
+::-webkit-scrollbar { display: none; }
+</style>
+</head>
+<body>
+
+<!-- Bottom nav -->
+<nav class="nav" id="nav">
+  <button class="nav-btn active" data-tab="summary" onclick="switchTab('summary')">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+    Сводка
+  </button>
+  <button class="nav-btn" data-tab="deals" onclick="switchTab('deals')">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 7H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1.1 2-.9 2-2V9c0-1.1-.9-2-2-2zm-1 11H5c-.55 0-1-.45-1-1v-7h16v7c0 .55-.45 1-1 1zM4 5h16v2H4z"/></svg>
+    Сделки
+  </button>
+  <button class="nav-btn" data-tab="settlements" onclick="switchTab('settlements')">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-4H9l3-3 3 3h-2v4zm0-8h-2V7h2v2z"/></svg>
+    Расчёты
+  </button>
+  <button class="nav-btn" data-tab="personal" onclick="switchTab('personal')">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+    Личное
+  </button>
+</nav>
+
+<!-- Pages -->
+<div id="summary"     class="page active"><div class="center"><div class="loader"></div><p>Загрузка…</p></div></div>
+<div id="deals"       class="page"><div class="center"><p class="c-hint">Загрузка…</p></div></div>
+<div id="settlements" class="page"><div class="center"><p class="c-hint">Загрузка…</p></div></div>
+<div id="personal"    class="page"><div class="center"><p class="c-hint">Загрузка…</p></div></div>
+
+<script>
+// ─── Config ──────────────────────────────────────────────
+const API_URL = 'REPLACE_WITH_APPS_SCRIPT_URL'; // заменить при деплое
+
+// ─── Telegram WebApp ─────────────────────────────────────
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+// ─── State ───────────────────────────────────────────────
+let D = null; // appData
+let charts = {};
+
+// ─── Tab switching ────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(tab).classList.add('active');
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+}
+
+// ─── Format helpers ───────────────────────────────────────
+function fmtUsd(n, dec) {
+  if (n == null) return '$0';
+  const abs = Math.abs(n);
+  const s   = dec != null
+    ? abs.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec })
+    : abs >= 1000
+      ? Math.round(abs).toLocaleString('en-US')
+      : abs.toFixed(abs < 10 ? 2 : 0);
+  return (n < 0 ? '-$' : '$') + s;
+}
+function fmtSign(n) {
+  if (!n) return '$0';
+  return (n > 0 ? '+' : '') + fmtUsd(n);
+}
+function fmtDate(d) { return d ? String(d).substring(0, 10) : ''; }
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── Fetch data ───────────────────────────────────────────
+async function loadData() {
+  const initData = tg ? tg.initData : '';
+  const url = `${API_URL}?action=data&initData=${encodeURIComponent(initData)}`;
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    D = json;
+    renderAll();
+  } catch (e) {
+    showError(e.message || String(e));
+  }
+}
+
+function showError(msg) {
+  const el = `
+    <div class="center">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="c-red">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <h3>Ошибка загрузки</h3>
+      <p>${escHtml(msg)}</p>
+      <br>
+      <button class="btn btn-ghost btn-sm" onclick="loadData()">Повторить</button>
+    </div>`;
+  document.querySelectorAll('.page').forEach(p => { if (p.classList.contains('active')) p.innerHTML = el; });
+}
+
+function renderAll() {
+  renderSummary();
+  renderDeals();
+  renderSettlements();
+  renderPersonal();
+}
+
+// ═══════════════════════════════════════════════════════
+// СВОДКА
+// ═══════════════════════════════════════════════════════
+function renderSummary() {
+  const s = D.summary;
+  const c = D.charts;
+  const hintColor = getComputedStyle(document.documentElement).getPropertyValue('--hint').trim() || '#9ca3af';
+
+  const cashCls   = s.cashUsd      >= 0 ? 'c-green' : 'c-red';
+  const profitCls = s.monthProfit  >= 0 ? 'c-green' : 'c-red';
+
+  let html = `
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="val ${cashCls}">${fmtUsd(s.cashUsd)}</div>
+      <div class="lbl">Касса (USD)</div>
+    </div>
+    <div class="stat">
+      <div class="val c-blue">${fmtUsd(s.lockedInDeals)}</div>
+      <div class="lbl">В открытых сделках</div>
+    </div>
+    <div class="stat">
+      <div class="val ${profitCls}">${fmtSign(s.monthProfit)}</div>
+      <div class="lbl">Этот месяц</div>
+    </div>
+    <div class="stat">
+      <div class="val c-amber">${fmtUsd(s.owedToMe)}</div>
+      <div class="lbl">Мне должны</div>
+    </div>
+    <div class="stat">
+      <div class="val c-red">${fmtUsd(s.iOwe)}</div>
+      <div class="lbl">Я должен</div>
+    </div>
+    <div class="stat">
+      <div class="val ${s.personalBalance >= 0 ? 'c-green' : 'c-red'}">${fmtSign(s.personalBalance)}</div>
+      <div class="lbl">Личный баланс</div>
+    </div>
+  </div>`;
+
+  if (c.monthly && c.monthly.length > 1) {
+    html += `<div class="card"><div class="card-title">Приход / Расход по месяцам</div><div class="chart-wrap"><canvas id="cMonthly"></canvas></div></div>`;
+  }
+  if (c.categories && c.categories.length > 0) {
+    html += `<div class="card"><div class="card-title">Расходы по категориям</div><div class="chart-wrap"><canvas id="cCats"></canvas></div></div>`;
+  }
+
+  document.getElementById('summary').innerHTML = html;
+
+  // Charts
+  const chartDefaults = {
+    color: hintColor,
+    borderColor: 'rgba(255,255,255,.08)',
+  };
+
+  if (c.monthly && c.monthly.length > 1) {
+    if (charts.monthly) charts.monthly.destroy();
+    charts.monthly = new Chart(document.getElementById('cMonthly'), {
+      type: 'bar',
+      data: {
+        labels: c.monthly.map(m => m.month.substring(5)),
+        datasets: [
+          {
+            label: 'Приход',
+            data: c.monthly.map(m => m.in),
+            backgroundColor: 'rgba(52,211,153,.65)',
+            borderColor: '#34d399',
+            borderWidth: 1,
+            borderRadius: 4,
+          },
+          {
+            label: 'Расход',
+            data: c.monthly.map(m => m.out),
+            backgroundColor: 'rgba(248,113,113,.65)',
+            borderColor: '#f87171',
+            borderWidth: 1,
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: hintColor, boxWidth: 12, font: { size: 11 } } },
+        },
+        scales: {
+          x: { ticks: { color: hintColor, font: { size: 10 } }, grid: { color: chartDefaults.borderColor } },
+          y: { ticks: { color: hintColor, font: { size: 10 }, callback: v => '$' + v }, grid: { color: chartDefaults.borderColor } },
+        },
+      },
+    });
+  }
+
+  if (c.categories && c.categories.length > 0) {
+    if (charts.cats) charts.cats.destroy();
+    const palette = ['#f87171','#fb923c','#fbbf24','#34d399','#60a5fa','#a78bfa','#f472b6','#94a3b8'];
+    charts.cats = new Chart(document.getElementById('cCats'), {
+      type: 'doughnut',
+      data: {
+        labels: c.categories.map(x => x.cat),
+        datasets: [{ data: c.categories.map(x => x.amt), backgroundColor: palette, borderWidth: 0 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '60%',
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: { color: hintColor, boxWidth: 10, font: { size: 10 }, padding: 8 },
+          },
+        },
+      },
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// СДЕЛКИ
+// ═══════════════════════════════════════════════════════
+const KANBAN_GROUPS = {
+  '📦 Склад Китай': ['1.','2.','3.','4.'],
+  '✈️ В пути':      ['5.','6.'],
+  '🏭 Склад БА':    ['7.','8.'],
+  '✅ Закрыто':     ['9.'],
+};
+
+function renderDeals() {
+  const deals = D.deals || [];
+
+  const cols = Object.entries(KANBAN_GROUPS).map(([title, prefixes]) => {
+    const group = deals.filter(d => prefixes.some(p => String(d.status).startsWith(p)));
+    const count = group.length;
+
+    const cards = group.map(d => {
+      const typeClass = d.status.startsWith('9.') ? 'closed' : d.type === 'Авиа' ? 'air' : 'cargo';
+      const typeIcon  = d.type === 'Авиа' ? '✈️' : d.type === 'Карго' ? '📦' : '📋';
+      const pct = d.expected > 0 ? Math.min(100, Math.round(d.received / d.expected * 100)) : 0;
+      const profitCls = d.profit >= 0 ? 'c-green' : 'c-red';
+      const shortStatus = String(d.status).replace(/^\d+\.\s*/, '');
+
+      return `
+        <div class="deal-card ${typeClass}">
+          <div class="deal-id">${typeIcon} ${escHtml(d.id)}</div>
+          <div class="deal-name">${escHtml(d.client)}</div>
+          <div class="deal-status">${escHtml(shortStatus)}</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <div class="deal-nums">
+            <span class="c-hint">${fmtUsd(d.received)} / ${fmtUsd(d.expected)}</span>
+            <span class="${profitCls}">${d.profit ? fmtSign(d.profit) : ''}</span>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="kanban-col">
+        <div class="kanban-col-title">
+          <span>${title}</span>
+          <span class="badge badge-blue">${count}</span>
+        </div>
+        ${cards || '<div style="font-size:11px;color:var(--hint);text-align:center;padding:10px 0">Нет</div>'}
+      </div>`;
+  }).join('');
+
+  document.getElementById('deals').innerHTML = deals.length === 0
+    ? '<div class="center"><p class="c-hint">Сделок пока нет</p></div>'
+    : `<div class="kanban-scroll"><div class="kanban">${cols}</div></div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// ВЗАИМОРАСЧЁТЫ
+// ═══════════════════════════════════════════════════════
+function renderSettlements() {
+  const s = D.settlements || [];
+
+  if (!s.length) {
+    document.getElementById('settlements').innerHTML = '<div class="center"><p class="c-hint">Долгов нет 🎉</p></div>';
+    return;
+  }
+
+  const cards = s.map(p => {
+    const net     = p.owedToMe - p.iOwe;
+    const netCls  = net >= 0 ? 'badge-green' : 'badge-red';
+    const initData = tg ? tg.initData : '';
+
+    const rows = p.debts.map(d => {
+      const icon   = d.type === 'Мне должны' ? '🟢' : '🔴';
+      const detail = [d.note, d.dealId].filter(Boolean).join(' · ');
+      return `
+        <div class="debt-row">
+          <div>
+            <div>${icon} ${escHtml(d.amount)} ${escHtml(d.currency)}${detail ? ' <span class="c-hint">· ' + escHtml(detail) + '</span>' : ''}</div>
+            <div class="debt-meta">${fmtDate(d.date)} · ${fmtUsd(d.amtUsd)}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="settleDebt('${escHtml(d.id)}', '${encodeURIComponent(initData)}')">Зачтено</button>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="party-card">
+        <div class="party-head">
+          <div class="party-name">${escHtml(p.party)}</div>
+          <div class="badge ${netCls}">${fmtSign(net)}</div>
+        </div>
+        <div class="party-amounts">
+          <span class="c-green">↑ ${fmtUsd(p.owedToMe)}</span>
+          <span class="c-red">↓ ${fmtUsd(p.iOwe)}</span>
+        </div>
+        <div>${rows}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('settlements').innerHTML = `<h2>Взаиморасчёты</h2>${cards}`;
+}
+
+async function settleDebt(debtId, encodedInitData) {
+  if (!confirm('Отметить долг как оплаченный?')) return;
+  try {
+    const url = `${API_URL}?action=settle&debtId=${encodeURIComponent(debtId)}&initData=${encodedInitData}`;
+    const res = await fetch(url);
+    const j   = await res.json();
+    if (j.ok) { await loadData(); }
+    else alert('Ошибка: ' + (j.error || 'неизвестно'));
+  } catch (e) { alert('Ошибка сети'); }
+}
+
+// ═══════════════════════════════════════════════════════
+// ЛИЧНОЕ
+// ═══════════════════════════════════════════════════════
+function renderPersonal() {
+  const txs = D.personal || [];
+  const s   = D.summary;
+
+  const balCls = s.personalBalance >= 0 ? 'c-green' : 'c-red';
+
+  const rows = txs.map(tx => {
+    const isIn  = tx.direction === 'Приход';
+    const amtCls = isIn ? 'c-green' : 'c-red';
+    const sign   = isIn ? '+' : '-';
+    return `
+      <div class="tx-row">
+        <div>
+          <div class="tx-cat">${escHtml(tx.category || tx.description || '—')}</div>
+          <div class="tx-date">${fmtDate(tx.date)}${tx.description && tx.category ? ' · ' + escHtml(tx.description) : ''}</div>
+        </div>
+        <div class="tx-amt ${amtCls}">${sign}${tx.amount} ${tx.currency}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('personal').innerHTML = `
+    <div class="stat-grid" style="grid-template-columns:1fr 1fr">
+      <div class="stat">
+        <div class="val ${balCls}">${fmtSign(s.personalBalance)}</div>
+        <div class="lbl">Личный баланс</div>
+      </div>
+      <div class="stat">
+        <div class="val c-hint">${txs.length}</div>
+        <div class="lbl">Транзакций</div>
+      </div>
+    </div>
+    <div class="card">
+      ${rows || '<div style="text-align:center;color:var(--hint);padding:16px">Нет личных транзакций</div>'}
+    </div>`;
+}
+
+// ─── Init ─────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
