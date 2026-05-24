@@ -515,10 +515,11 @@ function renderSummary() {
 // СДЕЛКИ
 // ═══════════════════════════════════════════════════════
 const DEAL_GROUPS = [
+  { title: '🔄 В работе',    prefixes: ['В работе', 'в работе', 'Оплачен'] },
   { title: '📦 Склад Китай', prefixes: ['1.','2.','3.','4.'] },
   { title: '✈️ В пути',      prefixes: ['5.','6.'] },
   { title: '🏭 Склад БА',    prefixes: ['7.','8.'] },
-  { title: '✅ Закрыто',     prefixes: ['9.'] },
+  { title: '✅ Закрыто',     prefixes: ['9.', 'ЗАКРЫТА', 'Закрыта'] },
 ];
 
 function renderDeals() {
@@ -538,22 +539,25 @@ function renderDeals() {
     html += `<div class="deals-section-title"><span>${title}</span><span class="badge badge-blue">${group.length}</span></div>`;
 
     group.forEach(d => {
-      const typeClass   = d.status.startsWith('9.') ? 'closed' : d.type === 'Авиа' ? 'air' : 'cargo';
+      const isClosed    = String(d.status).includes('ЗАКРЫТ') || String(d.status).startsWith('9.');
+      const typeClass   = isClosed ? 'closed' : d.type === 'Авиа' ? 'air' : 'cargo';
       const typeIcon    = d.type === 'Авиа' ? '✈️' : d.type === 'Карго' ? '📦' : '📋';
       const pct         = d.expected > 0 ? Math.min(100, Math.round(d.received / d.expected * 100)) : 0;
       const profitCls   = d.profit >= 0 ? 'c-green' : 'c-red';
       const shortStatus = String(d.status).replace(/^\d+\.\s*/, '');
+      const subtitle    = d.type && d.type !== 'Карго' && d.type !== 'Авиа' ? escHtml(d.type) : '';
 
       html += `
         <div class="deal-card ${typeClass}">
           <div class="deal-id">${typeIcon} ${escHtml(d.id)}</div>
-          <div class="deal-name">${escHtml(d.client)}</div>
+          <div class="deal-name">${escHtml(d.client)}${subtitle ? ' <span class="c-hint">· '+subtitle+'</span>' : ''}</div>
           <div class="deal-status">${escHtml(shortStatus)}</div>
           <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
           <div class="deal-nums">
             <span class="c-hint">${fmtUsd(d.received)}/${fmtUsd(d.expected)}</span>
             <span class="${profitCls}">${d.profit ? fmtSign(d.profit) : ''}</span>
           </div>
+          ${d.spent > 0 ? `<div class="deal-nums" style="margin-top:2px"><span class="c-hint" style="font-size:10px">Закупка: ${fmtUsd(d.spent)}</span></div>` : ''}
         </div>`;
     });
   });
