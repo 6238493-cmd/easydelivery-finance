@@ -494,11 +494,12 @@ function renderSettlements() {
       const detail = [d.note, d.dealId].filter(Boolean).join(' · ');
       return `
         <div class="debt-row">
-          <div>
-            <div>${icon} ${escHtml(d.amount)} ${escHtml(d.currency)}${detail ? ' <span class="c-hint">· ' + escHtml(detail) + '</span>' : ''}</div>
-            <div class="debt-meta">${fmtDate(d.date)} · ${fmtUsd(d.amtUsd)}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600">${icon} ${escHtml(d.amount)} ${escHtml(d.currency)} <span class="c-hint" style="font-weight:400">${fmtUsd(d.amtUsd)}</span></div>
+            ${d.note ? `<div style="font-size:12px;color:var(--text);margin-top:2px">${escHtml(d.note)}${d.dealId ? ' · ' + escHtml(d.dealId) : ''}</div>` : ''}
+            <div class="debt-meta">${fmtDate(d.date)}</div>
           </div>
-          <button class="btn btn-ghost btn-sm" onclick="settleDebt('${escHtml(d.id)}', '${encodeURIComponent(initData)}')">Зачтено</button>
+          <button class="btn btn-ghost btn-sm" style="margin-left:8px;flex-shrink:0" onclick="settleDebt('${escHtml(d.id)}', '${encodeURIComponent(initData)}')">Зачтено</button>
         </div>`;
     }).join('');
 
