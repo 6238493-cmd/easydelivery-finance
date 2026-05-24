@@ -109,19 +109,14 @@ h2 {
 }
 h2:first-child { margin-top: 0; }
 
-/* ── Deal kanban ───────────────────────────────────────── */
-.kanban-scroll { overflow-x: auto; margin: 0 -16px; padding: 0 16px 8px; }
-.kanban { display: flex; gap: 10px; width: max-content; }
-.kanban-col {
-  width: 220px;
-  background: var(--bg2);
-  border-radius: var(--radius);
-  padding: 12px;
-  flex-shrink: 0;
-}
-.kanban-col-title {
+/* ── Deal grid (2 колонки, вертикальный скролл) ────────── */
+.deals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.deals-section-title {
+  grid-column: 1 / -1;
   font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .06em; color: var(--hint); margin-bottom: 10px;
+  letter-spacing: .06em; color: var(--hint);
+  margin-top: 8px; padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between;
 }
 .deal-card {
@@ -232,7 +227,7 @@ h2:first-child { margin-top: 0; }
 
 <script>
 // ─── Config ──────────────────────────────────────────────
-const API_URL = 'https://easyfin-bot.duckdns.org/miniapp'; // заменить при деплое
+const API_URL = 'https://easyfin-bot.duckdns.org/miniapp';
 
 // ─── Telegram WebApp ─────────────────────────────────────
 const tg = window.Telegram && window.Telegram.WebApp;
@@ -281,6 +276,7 @@ async function loadData() {
     try {
       json = JSON.parse(text);
     } catch (_) {
+      // Показываем первые 200 символов ответа для отладки
       throw new Error('Ответ не JSON: ' + text.substring(0, 200));
     }
     if (json.error) throw new Error(json.error);
@@ -327,27 +323,27 @@ function renderSummary() {
   <div class="stat-grid">
     <div class="stat">
       <div class="val ${cashCls}">${fmtUsd(s.cashUsd)}</div>
-      <div class="lbl">Касса (USD)</div>
+      <div class="lbl">💼 Касса</div>
     </div>
     <div class="stat">
       <div class="val c-blue">${fmtUsd(s.lockedInDeals)}</div>
-      <div class="lbl">В открытых сделках</div>
+      <div class="lbl">🔒 Заморожено в сделках</div>
     </div>
     <div class="stat">
       <div class="val ${profitCls}">${fmtSign(s.monthProfit)}</div>
-      <div class="lbl">Этот месяц</div>
+      <div class="lbl">📅 Этот месяц</div>
     </div>
     <div class="stat">
       <div class="val c-amber">${fmtUsd(s.owedToMe)}</div>
-      <div class="lbl">Мне должны</div>
+      <div class="lbl">↗️ Мне должны</div>
     </div>
     <div class="stat">
       <div class="val c-red">${fmtUsd(s.iOwe)}</div>
-      <div class="lbl">Я должен</div>
+      <div class="lbl">↙️ Я должен</div>
     </div>
     <div class="stat">
       <div class="val ${s.personalBalance >= 0 ? 'c-green' : 'c-red'}">${fmtSign(s.personalBalance)}</div>
-      <div class="lbl">Личный баланс</div>
+      <div class="lbl">👤 Личное</div>
     </div>
   </div>`;
 
@@ -429,53 +425,52 @@ function renderSummary() {
 // ═══════════════════════════════════════════════════════
 // СДЕЛКИ
 // ═══════════════════════════════════════════════════════
-const KANBAN_GROUPS = {
-  '📦 Склад Китай': ['1.','2.','3.','4.'],
-  '✈️ В пути':      ['5.','6.'],
-  '🏭 Склад БА':    ['7.','8.'],
-  '✅ Закрыто':     ['9.'],
-};
+const DEAL_GROUPS = [
+  { title: '📦 Склад Китай', prefixes: ['1.','2.','3.','4.'] },
+  { title: '✈️ В пути',      prefixes: ['5.','6.'] },
+  { title: '🏭 Склад БА',    prefixes: ['7.','8.'] },
+  { title: '✅ Закрыто',     prefixes: ['9.'] },
+];
 
 function renderDeals() {
   const deals = D.deals || [];
 
-  const cols = Object.entries(KANBAN_GROUPS).map(([title, prefixes]) => {
-    const group = deals.filter(d => prefixes.some(p => String(d.status).startsWith(p)));
-    const count = group.length;
+  if (!deals.length) {
+    document.getElementById('deals').innerHTML = '<div class="center"><p class="c-hint">Сделок пока нет</p></div>';
+    return;
+  }
 
-    const cards = group.map(d => {
-      const typeClass = d.status.startsWith('9.') ? 'closed' : d.type === 'Авиа' ? 'air' : 'cargo';
-      const typeIcon  = d.type === 'Авиа' ? '✈️' : d.type === 'Карго' ? '📦' : '📋';
-      const pct = d.expected > 0 ? Math.min(100, Math.round(d.received / d.expected * 100)) : 0;
-      const profitCls = d.profit >= 0 ? 'c-green' : 'c-red';
+  let html = '<div class="deals-grid">';
+
+  DEAL_GROUPS.forEach(({ title, prefixes }) => {
+    const group = deals.filter(d => prefixes.some(p => String(d.status).startsWith(p)));
+    if (!group.length) return;
+
+    html += `<div class="deals-section-title"><span>${title}</span><span class="badge badge-blue">${group.length}</span></div>`;
+
+    group.forEach(d => {
+      const typeClass   = d.status.startsWith('9.') ? 'closed' : d.type === 'Авиа' ? 'air' : 'cargo';
+      const typeIcon    = d.type === 'Авиа' ? '✈️' : d.type === 'Карго' ? '📦' : '📋';
+      const pct         = d.expected > 0 ? Math.min(100, Math.round(d.received / d.expected * 100)) : 0;
+      const profitCls   = d.profit >= 0 ? 'c-green' : 'c-red';
       const shortStatus = String(d.status).replace(/^\d+\.\s*/, '');
 
-      return `
+      html += `
         <div class="deal-card ${typeClass}">
           <div class="deal-id">${typeIcon} ${escHtml(d.id)}</div>
           <div class="deal-name">${escHtml(d.client)}</div>
           <div class="deal-status">${escHtml(shortStatus)}</div>
           <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
           <div class="deal-nums">
-            <span class="c-hint">${fmtUsd(d.received)} / ${fmtUsd(d.expected)}</span>
+            <span class="c-hint">${fmtUsd(d.received)}/${fmtUsd(d.expected)}</span>
             <span class="${profitCls}">${d.profit ? fmtSign(d.profit) : ''}</span>
           </div>
         </div>`;
-    }).join('');
+    });
+  });
 
-    return `
-      <div class="kanban-col">
-        <div class="kanban-col-title">
-          <span>${title}</span>
-          <span class="badge badge-blue">${count}</span>
-        </div>
-        ${cards || '<div style="font-size:11px;color:var(--hint);text-align:center;padding:10px 0">Нет</div>'}
-      </div>`;
-  }).join('');
-
-  document.getElementById('deals').innerHTML = deals.length === 0
-    ? '<div class="center"><p class="c-hint">Сделок пока нет</p></div>'
-    : `<div class="kanban-scroll"><div class="kanban">${cols}</div></div>`;
+  html += '</div>';
+  document.getElementById('deals').innerHTML = html;
 }
 
 // ═══════════════════════════════════════════════════════
