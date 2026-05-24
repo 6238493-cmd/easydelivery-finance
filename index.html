@@ -236,11 +236,57 @@ h2:first-child { margin-top: 0; }
 .dir-btn.active-out { background: rgba(248,113,113,.15); border-color: var(--red);   color: var(--red);   }
 .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
 
+/* ── Общий баланс (full-width) ──────────────────────────── */
+.stat-total {
+  background: linear-gradient(135deg, rgba(52,211,153,.15), rgba(59,130,246,.1));
+  border: 1px solid rgba(52,211,153,.25);
+  border-radius: var(--radius); padding: 16px 12px;
+  text-align: center; margin-bottom: 10px;
+}
+.stat-total .val { font-size: 28px; font-weight: 700; line-height: 1.1; }
+.stat-total .lbl { font-size: 12px; color: var(--hint); margin-top: 3px; }
+
+/* ── Mic button ─────────────────────────────────────────── */
+.mic-btn {
+  position: fixed; bottom: 80px; right: 16px;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--btn); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; box-shadow: 0 4px 16px rgba(0,0,0,.3);
+  z-index: 100; transition: transform .15s, background .2s;
+}
+.mic-btn:active { transform: scale(.93); }
+.mic-btn.recording { background: var(--red); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.4)} 50%{box-shadow:0 0 0 10px rgba(248,113,113,0)} }
+.mic-toast {
+  position: fixed; bottom: 145px; right: 16px; left: 16px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px;
+  font-size: 13px; z-index: 101; display: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,.3);
+}
+
+/* ── Deal detail modal ──────────────────────────────────── */
+#dealDetailContainer .modal-overlay { z-index: 200; }
+.deal-detail-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;
+}
+.deal-detail-grid .stat { padding: 10px 8px; }
+.deal-detail-grid .val { font-size: 17px; }
+.deal-detail-grid .lbl { font-size: 10px; }
+
 /* ── Scroll fixes ───────────────────────────────────────── */
 ::-webkit-scrollbar { display: none; }
 </style>
 </head>
 <body>
+
+<!-- Deal Detail Container -->
+<div id="dealDetailContainer"></div>
+
+<!-- Mic button -->
+<button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Голосовой ввод">🎤</button>
+<div class="mic-toast" id="micToast"></div>
 
 <!-- Edit Modal -->
 <div id="editModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeEdit()">
@@ -408,11 +454,18 @@ function renderSummary() {
   const cashCls   = s.cashUsd      >= 0 ? 'c-green' : 'c-red';
   const profitCls = s.monthProfit  >= 0 ? 'c-green' : 'c-red';
 
+  const totalBalance = (s.cashUsd || 0) + (s.lockedInDeals || 0);
+  const totalCls = totalBalance >= 0 ? 'c-green' : 'c-red';
+
   let html = `
+  <div class="stat-total">
+    <div class="val ${totalCls}">${fmtSign(totalBalance)}</div>
+    <div class="lbl">⚖️ Общий баланс</div>
+  </div>
   <div class="stat-grid">
     <div class="stat">
       <div class="val ${cashCls}">${fmtUsd(s.cashUsd)}</div>
-      <div class="lbl">💼 Касса</div>
+      <div class="lbl">💵 Деньги сейчас</div>
     </div>
     <div class="stat">
       <div class="val c-green">${fmtSign(s.lockedInDeals)}</div>
@@ -548,7 +601,7 @@ function renderDeals() {
       const subtitle    = d.type && d.type !== 'Карго' && d.type !== 'Авиа' ? escHtml(d.type) : '';
 
       html += `
-        <div class="deal-card ${typeClass}">
+        <div class="deal-card ${typeClass}" onclick="openDealDetail('${escHtml(d.id)}')" style="cursor:pointer">
           <div class="deal-id">${typeIcon} ${escHtml(d.id)}</div>
           <div class="deal-name">${escHtml(d.client)}${subtitle ? ' <span class="c-hint">· '+subtitle+'</span>' : ''}</div>
           <div class="deal-status">${escHtml(shortStatus)}</div>
@@ -763,6 +816,124 @@ async function saveEdit() {
     if (j.ok) { closeEdit(); await loadData(); }
     else alert('Ошибка: ' + (j.error || 'неизвестно'));
   } catch (e) { alert('Ошибка: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════
+// ДЕТАЛИ СДЕЛКИ
+// ═══════════════════════════════════════════════════════
+function openDealDetail(dealId) {
+  const deal = (D.deals || []).find(d => String(d.id) === String(dealId));
+  if (!deal) return;
+  const txs = (D.transactions || []).filter(t => String(t.dealId) === String(dealId));
+
+  const profitCls = (deal.profit || 0) >= 0 ? 'c-green' : 'c-red';
+  const pct = deal.expected > 0 ? Math.min(100, Math.round(deal.received / deal.expected * 100)) : 0;
+
+  let txHtml = '';
+  if (!txs.length) {
+    txHtml = '<div class="c-hint" style="text-align:center;padding:16px 0">Транзакций по сделке нет</div>';
+  } else {
+    txHtml = txs.map(t => {
+      const cls  = t.direction === 'Приход' ? 'c-green' : 'c-red';
+      const sign = t.direction === 'Приход' ? '+' : '-';
+      return `<div class="history-row">
+        <div class="history-main">
+          <div>${escHtml(t.category || '')}${t.counterparty ? ' · ' + escHtml(t.counterparty) : ''}</div>
+          <div class="c-hint" style="font-size:11px">${escHtml(t.description || '')} &nbsp; ${escHtml((t.date||'').substring(0,10))}</div>
+        </div>
+        <div class="${cls}" style="font-weight:700;white-space:nowrap">${sign}${t.amount} ${t.currency}</div>
+      </div>`;
+    }).join('');
+  }
+
+  const html = `
+    <div class="modal-overlay" onclick="closeDealDetail()">
+      <div class="modal-box" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div style="font-weight:700;font-size:16px">${escHtml(deal.client)}</div>
+          <button onclick="closeDealDetail()" class="icon-btn" style="font-size:18px">✕</button>
+        </div>
+        <div class="c-hint" style="font-size:12px;margin-bottom:12px">${escHtml(deal.type || '')} · ${escHtml((deal.dateOpen||'').substring(0,10))}</div>
+        <div class="progress-bar" style="margin-bottom:12px"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <div class="deal-detail-grid">
+          <div class="stat"><div class="val c-amber">${fmtUsd(deal.expected)}</div><div class="lbl">Итого к оплате</div></div>
+          <div class="stat"><div class="val c-green">${fmtUsd(deal.received)}</div><div class="lbl">Получено</div></div>
+          <div class="stat"><div class="val c-red">${fmtUsd(deal.spent)}</div><div class="lbl">Потрачено</div></div>
+          <div class="stat"><div class="val ${profitCls}">${fmtSign(deal.profit)}</div><div class="lbl">Прибыль</div></div>
+        </div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--hint);margin-bottom:8px">
+          Транзакции (${txs.length})
+        </div>
+        ${txHtml}
+      </div>
+    </div>`;
+
+  document.getElementById('dealDetailContainer').innerHTML = html;
+}
+
+function closeDealDetail() {
+  document.getElementById('dealDetailContainer').innerHTML = '';
+}
+
+// ═══════════════════════════════════════════════════════
+// ГОЛОСОВОЙ ВВОД
+// ═══════════════════════════════════════════════════════
+let mediaRecorder = null;
+let audioChunks   = [];
+
+async function toggleMic() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+    return;
+  }
+  const btn = document.getElementById('micBtn');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks  = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      btn.classList.remove('recording');
+      btn.textContent = '🎤';
+      stream.getTracks().forEach(t => t.stop());
+      showMicToast('⏳ Распознаю...');
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      await sendVoice(blob);
+    };
+    mediaRecorder.start();
+    btn.classList.add('recording');
+    btn.textContent = '⏹';
+    showMicToast('🔴 Запись... нажми ещё раз чтобы остановить');
+  } catch (e) {
+    showMicToast('❌ Нет доступа к микрофону: ' + e.message, 3000);
+  }
+}
+
+async function sendVoice(blob) {
+  try {
+    const initData = tg ? tg.initData : '';
+    const resp = await fetch('https://easyfin-bot.duckdns.org/transcribe?initData=' + encodeURIComponent(initData), {
+      method: 'POST',
+      headers: { 'Content-Type': 'audio/webm' },
+      body: blob,
+      credentials: 'omit',
+    });
+    const j = await resp.json();
+    if (j.ok && j.text) {
+      showMicToast('🎤 Отправлено боту:\n"' + j.text + '"', 5000);
+    } else {
+      showMicToast('❌ Не удалось распознать речь', 3000);
+    }
+  } catch (e) {
+    showMicToast('❌ Ошибка: ' + e.message, 3000);
+  }
+}
+
+function showMicToast(msg, duration) {
+  const toast = document.getElementById('micToast');
+  toast.textContent = msg;
+  toast.style.display = 'block';
+  if (duration) setTimeout(() => { toast.style.display = 'none'; }, duration);
 }
 
 // ─── Init ─────────────────────────────────────────────────
