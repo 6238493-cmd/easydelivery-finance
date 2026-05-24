@@ -193,11 +193,94 @@ h2:first-child { margin-top: 0; }
 /* ── Divider ────────────────────────────────────────────── */
 .divider { height: 1px; background: var(--border); margin: 12px 0; }
 
+/* ── История транзакций ─────────────────────────────────── */
+.history-row {
+  background: var(--bg2); border-radius: var(--radius-sm);
+  padding: 10px 12px; margin-bottom: 8px;
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.history-dir { font-size: 17px; flex-shrink: 0; margin-top: 1px; font-weight: 700; }
+.history-main { flex: 1; min-width: 0; }
+.history-amt  { font-weight: 700; font-size: 14px; }
+.history-meta { font-size: 11px; color: var(--hint); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.icon-btn { background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px; border-radius: 6px; color: var(--hint); }
+.icon-btn:active { background: var(--border); }
+
+/* ── Edit modal ─────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  display: flex; align-items: flex-end; z-index: 500;
+}
+.modal-box {
+  background: var(--bg2); border-radius: var(--radius) var(--radius) 0 0;
+  padding: 20px 16px 32px; width: 100%; max-height: 88vh; overflow-y: auto;
+}
+.modal-title { font-weight: 700; font-size: 16px; margin-bottom: 16px; }
+.form-row { margin-bottom: 12px; }
+.form-label { font-size: 11px; color: var(--hint); margin-bottom: 5px; }
+.form-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+  color: var(--text); font-size: 14px; outline: none;
+}
+.form-input:focus { border-color: var(--btn); }
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.dir-toggle { display: flex; gap: 8px; }
+.dir-btn {
+  flex: 1; padding: 9px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: none;
+  color: var(--hint); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.dir-btn.active-in  { background: rgba(52,211,153,.15); border-color: var(--green); color: var(--green); }
+.dir-btn.active-out { background: rgba(248,113,113,.15); border-color: var(--red);   color: var(--red);   }
+.modal-btns { display: flex; gap: 10px; margin-top: 16px; }
+
 /* ── Scroll fixes ───────────────────────────────────────── */
 ::-webkit-scrollbar { display: none; }
 </style>
 </head>
 <body>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeEdit()">
+  <div class="modal-box">
+    <div class="modal-title">✏️ Редактировать</div>
+    <div class="form-row">
+      <div class="form-label">Направление</div>
+      <div class="dir-toggle">
+        <button class="dir-btn" id="btnIn"  onclick="setEditDir('Приход')">↗ Приход</button>
+        <button class="dir-btn" id="btnOut" onclick="setEditDir('Расход')">↙ Расход</button>
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div>
+        <div class="form-label">Сумма</div>
+        <input class="form-input" id="editAmount" type="number" step="0.01">
+      </div>
+      <div>
+        <div class="form-label">Валюта</div>
+        <input class="form-input" id="editCurrency" type="text" style="text-transform:uppercase">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-label">Категория</div>
+      <input class="form-input" id="editCategory" type="text">
+    </div>
+    <div class="form-row">
+      <div class="form-label">Контрагент</div>
+      <input class="form-input" id="editCounterparty" type="text">
+    </div>
+    <div class="form-row">
+      <div class="form-label">Описание</div>
+      <input class="form-input" id="editDescription" type="text">
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeEdit()">Отмена</button>
+      <button class="btn" onclick="saveEdit()">Сохранить</button>
+    </div>
+  </div>
+</div>
 
 <!-- Bottom nav -->
 <nav class="nav" id="nav">
@@ -217,6 +300,10 @@ h2:first-child { margin-top: 0; }
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
     Личное
   </button>
+  <button class="nav-btn" data-tab="history" onclick="switchTab('history')">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+    История
+  </button>
 </nav>
 
 <!-- Pages -->
@@ -224,6 +311,7 @@ h2:first-child { margin-top: 0; }
 <div id="deals"       class="page"><div class="center"><p class="c-hint">Загрузка…</p></div></div>
 <div id="settlements" class="page"><div class="center"><p class="c-hint">Загрузка…</p></div></div>
 <div id="personal"    class="page"><div class="center"><p class="c-hint">Загрузка…</p></div></div>
+<div id="history"     class="page"><div class="center"><p class="c-hint">Загрузка…</p></div></div>
 
 <script>
 // ─── Config ──────────────────────────────────────────────
@@ -306,6 +394,7 @@ function renderAll() {
   renderDeals();
   renderSettlements();
   renderPersonal();
+  renderHistory();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -568,6 +657,108 @@ function renderPersonal() {
     <div class="card">
       ${rows || '<div style="text-align:center;color:var(--hint);padding:16px">Нет личных транзакций</div>'}
     </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// ИСТОРИЯ ТРАНЗАКЦИЙ
+// ═══════════════════════════════════════════════════════
+const txById = new Map();
+
+function renderHistory() {
+  const txs = D.transactions || [];
+  txById.clear();
+  txs.forEach(tx => txById.set(tx.id, tx));
+
+  if (!txs.length) {
+    document.getElementById('history').innerHTML = '<div class="center"><p class="c-hint">Транзакций пока нет</p></div>';
+    return;
+  }
+
+  const rows = txs.map(tx => {
+    const isIn    = tx.direction === 'Приход';
+    const amtCls  = isIn ? 'c-green' : 'c-red';
+    const icon    = isIn ? '↗' : '↙';
+    const meta    = [tx.category, tx.counterparty].filter(Boolean).join(' · ');
+    const sphereTag = tx.sphere === 'Личное' ? ' · 👤' : '';
+    return `
+      <div class="history-row">
+        <div class="history-dir ${amtCls}">${icon}</div>
+        <div class="history-main">
+          <div class="history-amt ${amtCls}">${isIn ? '+' : '−'}${escHtml(String(tx.amount))} ${escHtml(tx.currency)} <span style="font-size:11px;font-weight:400;color:var(--hint)">${fmtUsd(tx.amtUsd)}</span></div>
+          ${meta       ? `<div class="history-meta">${escHtml(meta)}</div>` : ''}
+          ${tx.description ? `<div class="history-meta">${escHtml(tx.description)}</div>` : ''}
+          <div class="history-meta">${fmtDate(tx.date)}${sphereTag}</div>
+        </div>
+        <div class="history-actions">
+          <button class="icon-btn" onclick="openEditTx('${escHtml(tx.id)}')">✏️</button>
+          <button class="icon-btn" onclick="deleteTx('${escHtml(tx.id)}')">🗑️</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('history').innerHTML = `<div>${rows}</div>`;
+}
+
+async function deleteTx(txId) {
+  if (!confirm('Удалить транзакцию?')) return;
+  try {
+    const initData = tg ? tg.initData : '';
+    const url = `${API_URL}?action=delete_tx&txId=${encodeURIComponent(txId)}&initData=${encodeURIComponent(initData)}`;
+    const j = await (await fetch(url, { credentials: 'omit', redirect: 'follow' })).json();
+    if (j.ok) { await loadData(); }
+    else alert('Ошибка: ' + (j.error || 'неизвестно'));
+  } catch (e) { alert('Ошибка сети'); }
+}
+
+// ─── Edit modal ───────────────────────────────────────────
+let editingId = null;
+
+function openEditTx(txId) {
+  const tx = txById.get(txId);
+  if (!tx) return;
+  editingId = txId;
+  document.getElementById('editAmount').value      = tx.amount;
+  document.getElementById('editCurrency').value    = tx.currency;
+  document.getElementById('editCategory').value    = tx.category || '';
+  document.getElementById('editCounterparty').value = tx.counterparty || '';
+  document.getElementById('editDescription').value = tx.description || '';
+  setEditDir(tx.direction);
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+function closeEdit() {
+  document.getElementById('editModal').style.display = 'none';
+  editingId = null;
+}
+
+function setEditDir(dir) {
+  document.getElementById('btnIn').className  = 'dir-btn' + (dir === 'Приход' ? ' active-in'  : '');
+  document.getElementById('btnOut').className = 'dir-btn' + (dir === 'Расход' ? ' active-out' : '');
+  document.getElementById('btnIn').dataset.active  = dir === 'Приход' ? '1' : '';
+  document.getElementById('btnOut').dataset.active = dir === 'Расход' ? '1' : '';
+}
+
+function getEditDir() {
+  return document.getElementById('btnIn').dataset.active ? 'Приход' : 'Расход';
+}
+
+async function saveEdit() {
+  if (!editingId) return;
+  try {
+    const initData = tg ? tg.initData : '';
+    const fields = {
+      direction:    getEditDir(),
+      amount:       parseFloat(document.getElementById('editAmount').value),
+      currency:     document.getElementById('editCurrency').value.toUpperCase(),
+      category:     document.getElementById('editCategory').value,
+      counterparty: document.getElementById('editCounterparty').value,
+      description:  document.getElementById('editDescription').value,
+    };
+    const url = `${API_URL}?action=edit_tx&txId=${encodeURIComponent(editingId)}&fields=${encodeURIComponent(JSON.stringify(fields))}&initData=${encodeURIComponent(initData)}`;
+    const j = await (await fetch(url, { credentials: 'omit', redirect: 'follow' })).json();
+    if (j.ok) { closeEdit(); await loadData(); }
+    else alert('Ошибка: ' + (j.error || 'неизвестно'));
+  } catch (e) { alert('Ошибка: ' + e.message); }
 }
 
 // ─── Init ─────────────────────────────────────────────────
