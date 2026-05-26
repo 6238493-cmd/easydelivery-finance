@@ -265,6 +265,47 @@ h2:first-child { margin-top: 0; }
 .account-card .lbl  { font-size: 11px; color: var(--hint); margin-top: 3px; }
 .account-card .upd  { font-size: 10px; color: var(--hint); margin-top: 2px; opacity: .6; }
 
+/* ── Фильтры истории ────────────────────────────────────── */
+.filter-row {
+  display: flex; gap: 6px; margin-bottom: 14px;
+  overflow-x: auto; padding-bottom: 2px;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.filter-row::-webkit-scrollbar { display: none; }
+.filter-btn {
+  flex-shrink: 0; cursor: pointer;
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--hint); border-radius: 20px;
+  padding: 5px 13px; font-size: 12px; font-weight: 500;
+  transition: all .15s;
+}
+.filter-btn.active { background: var(--btn); border-color: var(--btn); color: #fff; }
+
+/* ── Группировка по дате в истории ─────────────────────── */
+.date-header {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--hint);
+  padding: 14px 0 6px; display: flex;
+  justify-content: space-between; align-items: center;
+}
+.date-header:first-child { padding-top: 2px; }
+.date-day-total { font-size: 11px; font-weight: 600; }
+
+/* ── Дашборд плитки (Главная) ───────────────────────────── */
+.dash-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; margin-bottom: 10px;
+}
+.dash-wide { grid-column: 1 / -1; }
+.dash-card {
+  background: var(--bg2); border-radius: var(--radius);
+  padding: 14px 12px; text-align: center;
+}
+.dash-card .val { font-size: 20px; font-weight: 700; line-height: 1.15; }
+.dash-card .lbl { font-size: 11px; color: var(--hint); margin-top: 3px; }
+.dash-card .sub { font-size: 11px; color: var(--hint); margin-top: 6px; display: flex; justify-content: center; gap: 10px; }
+.dash-section { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--hint); margin: 16px 0 8px; }
+
 /* ── Mic button ─────────────────────────────────────────── */
 .mic-btn {
   position: fixed; bottom: 80px; right: 16px;
@@ -351,32 +392,27 @@ h2:first-child { margin-top: 0; }
 <nav class="nav" id="nav">
   <button class="nav-btn active" data-tab="summary" onclick="switchTab('summary')">
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-    Сводка
+    Главная
   </button>
   <button class="nav-btn" data-tab="deals" onclick="switchTab('deals')">
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 7H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1.1 2-.9 2-2V9c0-1.1-.9-2-2-2zm-1 11H5c-.55 0-1-.45-1-1v-7h16v7c0 .55-.45 1-1 1zM4 5h16v2H4z"/></svg>
     Сделки
   </button>
-  <button class="nav-btn" data-tab="settlements" onclick="switchTab('settlements')">
-    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-4H9l3-3 3 3h-2v4zm0-8h-2V7h2v2z"/></svg>
-    Расчёты
-  </button>
-  <button class="nav-btn" data-tab="personal" onclick="switchTab('personal')">
-    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-    Личное
-  </button>
   <button class="nav-btn" data-tab="history" onclick="switchTab('history')">
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
     История
+  </button>
+  <button class="nav-btn" data-tab="settlements" onclick="switchTab('settlements')">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+    Долги
   </button>
 </nav>
 
 <!-- Pages -->
 <div id="summary"     class="page active"><div class="center"><div class="loader"></div><p>Загрузка…</p></div></div>
 <div id="deals"       class="page"><div class="center"><p class="c-hint">Загрузка…</p></div></div>
-<div id="settlements" class="page"><div class="center"><p class="c-hint">Загрузка…</p></div></div>
-<div id="personal"    class="page"><div class="center"><p class="c-hint">Загрузка…</p></div></div>
 <div id="history"     class="page"><div class="center"><p class="c-hint">Загрузка…</p></div></div>
+<div id="settlements" class="page"><div class="center"><p class="c-hint">Загрузка…</p></div></div>
 
 <script>
 // ─── Config ──────────────────────────────────────────────
@@ -457,9 +493,8 @@ function showError(msg) {
 function renderAll() {
   renderSummary();
   renderDeals();
-  renderSettlements();
-  renderPersonal();
   renderHistory();
+  renderSettlements();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -469,86 +504,103 @@ function renderSummary() {
   const s = D.summary;
   const c = D.charts;
   const hintColor = getComputedStyle(document.documentElement).getPropertyValue('--hint').trim() || '#9ca3af';
-  const profitCls = s.monthProfit >= 0 ? 'c-green' : 'c-red';
 
-  // Живые балансы счетов
+  // ── Счета ──────────────────────────────────────────────
   const ab      = s.accountBalances || {};
-  const bybit   = ab['Bybit_USDT'] || ab['Bybit'] || null;
+  const bybit   = ab['Bybit_USDT'] || null;
   const bybitArs = ab['Bybit_ARS'] || null;
   const mp      = ab['MercadoPago'] || null;
+  const bybitUsd = bybit ? bybit.amount : 0;
 
-  // Общий баланс = Bybit USDT + Прибыль в сделках (MP в ARS не конвертируем)
-  const bybitUsd   = bybit ? bybit.amount : 0;
-  const totalBalance = bybitUsd + (s.lockedInDeals || 0);
-  const totalCls   = totalBalance >= 0 ? 'c-green' : 'c-red';
-
-  // Форматирование времени обновления
   function fmtUpd(iso) {
     if (!iso) return '';
-    try {
-      const d = new Date(iso);
-      const hh = String(d.getHours()).padStart(2,'0');
-      const mm = String(d.getMinutes()).padStart(2,'0');
-      return hh + ':' + mm;
-    } catch { return ''; }
+    try { const d = new Date(iso); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
+    catch { return ''; }
   }
 
-  // Карточки счетов
   let accountsHtml = '<div class="accounts-row">';
   if (bybit) {
-    accountsHtml += `
-      <div class="account-card bybit">
-        <div class="val c-green">${bybit.amount.toLocaleString('ru', {maximumFractionDigits:2})} USDT</div>
-        <div class="lbl">⚡ Bybit</div>
-        ${bybit.updatedAt ? `<div class="upd">обновлено ${fmtUpd(bybit.updatedAt)}</div>` : ''}
-      </div>`;
+    accountsHtml += `<div class="account-card bybit">
+      <div class="val c-green">${bybit.amount.toLocaleString('ru',{maximumFractionDigits:2})} USDT</div>
+      <div class="lbl">⚡ Bybit</div>
+      ${bybit.updatedAt ? `<div class="upd">${fmtUpd(bybit.updatedAt)}</div>` : ''}
+    </div>`;
   }
   if (bybitArs && bybitArs.amount > 0) {
-    accountsHtml += `
-      <div class="account-card bybit">
-        <div class="val c-amber">${bybitArs.amount.toLocaleString('ru', {maximumFractionDigits:0})} ARS</div>
-        <div class="lbl">⚡ Bybit ARS</div>
-      </div>`;
+    accountsHtml += `<div class="account-card bybit">
+      <div class="val c-amber">${bybitArs.amount.toLocaleString('ru',{maximumFractionDigits:0})} ARS</div>
+      <div class="lbl">⚡ Bybit ARS</div>
+    </div>`;
   }
-  if (mp) {
-    accountsHtml += `
-      <div class="account-card mp">
-        <div class="val" style="color:#00b1ea">${mp.amount.toLocaleString('ru', {maximumFractionDigits:0})} ARS</div>
-        <div class="lbl">💳 Mercado Pago</div>
-        ${mp.updatedAt ? `<div class="upd">обновлено ${fmtUpd(mp.updatedAt)}</div>` : ''}
-      </div>`;
+  if (mp && mp.amount > 0) {
+    accountsHtml += `<div class="account-card mp">
+      <div class="val" style="color:#00b1ea">${mp.amount.toLocaleString('ru',{maximumFractionDigits:2})} ARS</div>
+      <div class="lbl">💳 Mercado Pago</div>
+      ${mp.updatedAt ? `<div class="upd">${fmtUpd(mp.updatedAt)}</div>` : ''}
+    </div>`;
   }
   if (!bybit && !mp) {
-    accountsHtml += `<div class="account-card" style="opacity:.5;grid-column:1/-1;font-size:12px;color:var(--hint)">Балансы Bybit и MP загружаются…</div>`;
+    accountsHtml += `<div class="account-card" style="opacity:.5;grid-column:1/-1;text-align:center;font-size:12px;color:var(--hint)">Балансы загружаются…</div>`;
   }
   accountsHtml += '</div>';
+
+  // ── Общий баланс ───────────────────────────────────────
+  const totalBalance = bybitUsd + (s.lockedInDeals || 0);
+  const totalCls = totalBalance >= 0 ? 'c-green' : 'c-red';
+
+  // ── Этот месяц из charts ───────────────────────────────
+  const thisMonth = new Date().toISOString().substring(0, 7);
+  const md = (c.monthly || []).find(m => m.month === thisMonth) || { in: 0, out: 0 };
+  const monthCls = s.monthProfit >= 0 ? 'c-green' : 'c-red';
+
+  // ── Сделки в работе ────────────────────────────────────
+  const activeDeals = (D.deals || []).filter(d => {
+    const st = String(d.status);
+    return !st.includes('ЗАКРЫТ') && !st.startsWith('9.');
+  });
+
+  // ── Долги нетто ────────────────────────────────────────
+  const debtNet = (s.owedToMe || 0) - (s.iOwe || 0);
+  const debtCls = debtNet >= 0 ? 'c-green' : 'c-red';
 
   let html = `
   <div class="stat-total">
     <div class="val ${totalCls}">${fmtSign(totalBalance)}</div>
-    <div class="lbl">⚖️ Общий баланс (Bybit + сделки)</div>
+    <div class="lbl">⚖️ Общий баланс (Bybit + прибыль в сделках)</div>
   </div>
   ${accountsHtml}
-  <div class="stat-grid">
-    <div class="stat">
+
+  <div class="dash-section">Этот месяц</div>
+  <div class="dash-row">
+    <div class="dash-card">
+      <div class="val c-green">+${fmtUsd(md.in)}</div>
+      <div class="lbl">↗ Приход</div>
+    </div>
+    <div class="dash-card">
+      <div class="val c-red">−${fmtUsd(md.out)}</div>
+      <div class="lbl">↙ Расход</div>
+    </div>
+  </div>
+
+  <div class="dash-section">Сделки и долги</div>
+  <div class="dash-row">
+    <div class="dash-card">
       <div class="val c-green">${fmtSign(s.lockedInDeals)}</div>
       <div class="lbl">💰 Прибыль в сделках</div>
     </div>
-    <div class="stat">
-      <div class="val ${profitCls}">${fmtSign(s.monthProfit)}</div>
-      <div class="lbl">📅 Этот месяц</div>
+    <div class="dash-card" style="cursor:pointer" onclick="switchTab('deals')">
+      <div class="val c-blue">${activeDeals.length}</div>
+      <div class="lbl">📦 Сделок в работе</div>
     </div>
-    <div class="stat">
+  </div>
+  <div class="dash-row">
+    <div class="dash-card" style="cursor:pointer" onclick="switchTab('settlements')">
       <div class="val c-amber">${fmtUsd(s.owedToMe)}</div>
-      <div class="lbl">↗️ Мне должны</div>
+      <div class="lbl">↗ Мне должны</div>
     </div>
-    <div class="stat">
+    <div class="dash-card" style="cursor:pointer" onclick="switchTab('settlements')">
       <div class="val c-red">${fmtUsd(s.iOwe)}</div>
-      <div class="lbl">↙️ Я должен</div>
-    </div>
-    <div class="stat">
-      <div class="val ${s.personalBalance >= 0 ? 'c-green' : 'c-red'}">${fmtSign(s.personalBalance)}</div>
-      <div class="lbl">👤 Личное</div>
+      <div class="lbl">↙ Я должен</div>
     </div>
   </div>`;
 
@@ -726,7 +778,7 @@ function renderSettlements() {
       </div>`;
   }).join('');
 
-  document.getElementById('settlements').innerHTML = `<h2>Взаиморасчёты</h2>${cards}`;
+  document.getElementById('settlements').innerHTML = cards;
 }
 
 async function settleDebt(debtId, encodedInitData) {
@@ -740,83 +792,99 @@ async function settleDebt(debtId, encodedInitData) {
   } catch (e) { alert('Ошибка сети'); }
 }
 
-// ═══════════════════════════════════════════════════════
-// ЛИЧНОЕ
-// ═══════════════════════════════════════════════════════
-function renderPersonal() {
-  const txs = D.personal || [];
-  const s   = D.summary;
-
-  const balCls = s.personalBalance >= 0 ? 'c-green' : 'c-red';
-
-  const rows = txs.map(tx => {
-    const isIn  = tx.direction === 'Приход';
-    const amtCls = isIn ? 'c-green' : 'c-red';
-    const sign   = isIn ? '+' : '-';
-    return `
-      <div class="tx-row">
-        <div>
-          <div class="tx-cat">${escHtml(tx.category || tx.description || '—')}</div>
-          <div class="tx-date">${fmtDate(tx.date)}${tx.description && tx.category ? ' · ' + escHtml(tx.description) : ''}</div>
-        </div>
-        <div class="tx-amt ${amtCls}">${sign}${tx.amount} ${tx.currency}</div>
-      </div>`;
-  }).join('');
-
-  document.getElementById('personal').innerHTML = `
-    <div class="stat-grid" style="grid-template-columns:1fr 1fr">
-      <div class="stat">
-        <div class="val ${balCls}">${fmtSign(s.personalBalance)}</div>
-        <div class="lbl">Личный баланс</div>
-      </div>
-      <div class="stat">
-        <div class="val c-hint">${txs.length}</div>
-        <div class="lbl">Транзакций</div>
-      </div>
-    </div>
-    <div class="card">
-      ${rows || '<div style="text-align:center;color:var(--hint);padding:16px">Нет личных транзакций</div>'}
-    </div>`;
-}
+// renderPersonal удалён — личное доступно через фильтр в Истории
 
 // ═══════════════════════════════════════════════════════
 // ИСТОРИЯ ТРАНЗАКЦИЙ
 // ═══════════════════════════════════════════════════════
 const txById = new Map();
+let historyFilter = 'all'; // all | biz | personal | in | out
+
+function setHistoryFilter(f) {
+  historyFilter = f;
+  renderHistory();
+}
+
+function fmtDateLabel(dateStr) {
+  const today = new Date().toISOString().substring(0, 10);
+  const yest  = new Date(Date.now() - 86400000).toISOString().substring(0, 10);
+  if (dateStr === today) return 'Сегодня';
+  if (dateStr === yest)  return 'Вчера';
+  const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  try { const d = new Date(dateStr + 'T12:00:00'); return d.getDate() + ' ' + months[d.getMonth()]; }
+  catch { return dateStr; }
+}
 
 function renderHistory() {
-  const txs = D.transactions || [];
+  const allTxs = D.transactions || [];
   txById.clear();
-  txs.forEach(tx => txById.set(tx.id, tx));
+  allTxs.forEach(tx => txById.set(tx.id, tx));
+
+  // Фильтрация
+  const txs = allTxs.filter(tx => {
+    if (historyFilter === 'biz')      return tx.sphere !== 'Личное';
+    if (historyFilter === 'personal') return tx.sphere === 'Личное';
+    if (historyFilter === 'in')       return tx.direction === 'Приход';
+    if (historyFilter === 'out')      return tx.direction === 'Расход';
+    return true;
+  });
+
+  const f = historyFilter;
+  const filterBar = `<div class="filter-row">
+    <button class="filter-btn ${f==='all'?'active':''}"      onclick="setHistoryFilter('all')">Все</button>
+    <button class="filter-btn ${f==='biz'?'active':''}"      onclick="setHistoryFilter('biz')">Бизнес</button>
+    <button class="filter-btn ${f==='personal'?'active':''}" onclick="setHistoryFilter('personal')">👤 Личное</button>
+    <button class="filter-btn ${f==='in'?'active':''}"       onclick="setHistoryFilter('in')">↗ Приход</button>
+    <button class="filter-btn ${f==='out'?'active':''}"      onclick="setHistoryFilter('out')">↙ Расход</button>
+  </div>`;
 
   if (!txs.length) {
-    document.getElementById('history').innerHTML = '<div class="center"><p class="c-hint">Транзакций пока нет</p></div>';
+    document.getElementById('history').innerHTML = filterBar + '<div class="center"><p class="c-hint">Нет транзакций</p></div>';
     return;
   }
 
-  const rows = txs.map(tx => {
-    const isIn    = tx.direction === 'Приход';
-    const amtCls  = isIn ? 'c-green' : 'c-red';
-    const icon    = isIn ? '↗' : '↙';
-    const meta    = [tx.category, tx.counterparty].filter(Boolean).join(' · ');
-    const sphereTag = tx.sphere === 'Личное' ? ' · 👤' : '';
-    return `
-      <div class="history-row">
+  // Группировка по дате
+  const byDate = {};
+  txs.forEach(tx => {
+    const d = String(tx.date || '').substring(0, 10);
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(tx);
+  });
+
+  let rows = '';
+  Object.keys(byDate).sort().reverse().forEach(date => {
+    const dayTxs = byDate[date];
+    const dayNet = dayTxs.reduce((s, t) => s + (t.direction === 'Приход' ? (t.amtUsd||0) : -(t.amtUsd||0)), 0);
+    const netCls = dayNet >= 0 ? 'c-green' : 'c-red';
+
+    rows += `<div class="date-header">
+      <span>${fmtDateLabel(date)}</span>
+      <span class="date-day-total ${netCls}">${fmtSign(dayNet)}</span>
+    </div>`;
+
+    dayTxs.forEach(tx => {
+      const isIn   = tx.direction === 'Приход';
+      const amtCls = isIn ? 'c-green' : 'c-red';
+      const icon   = isIn ? '↗' : '↙';
+      const meta   = [tx.category, tx.counterparty].filter(Boolean).join(' · ');
+      const sphereTag = tx.sphere === 'Личное' ? '<span style="font-size:10px;opacity:.6"> 👤</span>' : '';
+
+      rows += `<div class="history-row">
         <div class="history-dir ${amtCls}">${icon}</div>
         <div class="history-main">
-          <div class="history-amt ${amtCls}">${isIn ? '+' : '−'}${escHtml(String(tx.amount))} ${escHtml(tx.currency)} <span style="font-size:11px;font-weight:400;color:var(--hint)">${fmtUsd(tx.amtUsd)}</span></div>
-          ${meta       ? `<div class="history-meta">${escHtml(meta)}</div>` : ''}
-          ${tx.description ? `<div class="history-meta">${escHtml(tx.description)}</div>` : ''}
-          <div class="history-meta">${fmtDate(tx.date)}${sphereTag}</div>
+          <div class="history-amt ${amtCls}">${isIn?'+':'−'}${escHtml(String(tx.amount))} ${escHtml(tx.currency)}${sphereTag} <span style="font-size:11px;font-weight:400;color:var(--hint)">${fmtUsd(tx.amtUsd)}</span></div>
+          ${meta          ? `<div class="history-meta">${escHtml(meta)}</div>` : ''}
+          ${tx.description? `<div class="history-meta">${escHtml(tx.description)}</div>` : ''}
         </div>
         <div class="history-actions">
           <button class="icon-btn" onclick="openEditTx('${escHtml(tx.id)}')">✏️</button>
           <button class="icon-btn" onclick="deleteTx('${escHtml(tx.id)}')">🗑️</button>
         </div>
       </div>`;
-  }).join('');
+    });
+  });
 
-  document.getElementById('history').innerHTML = `<div>${rows}</div>`;
+  document.getElementById('history').innerHTML = filterBar + `<div>${rows}</div>`;
 }
 
 async function deleteTx(txId) {
