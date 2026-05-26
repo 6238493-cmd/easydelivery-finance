@@ -246,6 +246,25 @@ h2:first-child { margin-top: 0; }
 .stat-total .val { font-size: 28px; font-weight: 700; line-height: 1.1; }
 .stat-total .lbl { font-size: 12px; color: var(--hint); margin-top: 3px; }
 
+/* ── Счета (Bybit / MP) ─────────────────────────────────── */
+.accounts-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.account-card {
+  background: var(--bg2);
+  border-radius: var(--radius);
+  padding: 12px;
+  text-align: center;
+}
+.account-card.bybit { border-left: 3px solid #f7a600; }
+.account-card.mp    { border-left: 3px solid #00b1ea; }
+.account-card .val  { font-size: 18px; font-weight: 700; line-height: 1.1; }
+.account-card .lbl  { font-size: 11px; color: var(--hint); margin-top: 3px; }
+.account-card .upd  { font-size: 10px; color: var(--hint); margin-top: 2px; opacity: .6; }
+
 /* ── Mic button ─────────────────────────────────────────── */
 .mic-btn {
   position: fixed; bottom: 80px; right: 16px;
@@ -450,23 +469,67 @@ function renderSummary() {
   const s = D.summary;
   const c = D.charts;
   const hintColor = getComputedStyle(document.documentElement).getPropertyValue('--hint').trim() || '#9ca3af';
+  const profitCls = s.monthProfit >= 0 ? 'c-green' : 'c-red';
 
-  const cashCls   = s.cashUsd      >= 0 ? 'c-green' : 'c-red';
-  const profitCls = s.monthProfit  >= 0 ? 'c-green' : 'c-red';
+  // Живые балансы счетов
+  const ab      = s.accountBalances || {};
+  const bybit   = ab['Bybit_USDT'] || ab['Bybit'] || null;
+  const bybitArs = ab['Bybit_ARS'] || null;
+  const mp      = ab['MercadoPago'] || null;
 
-  const totalBalance = (s.cashUsd || 0) + (s.lockedInDeals || 0);
-  const totalCls = totalBalance >= 0 ? 'c-green' : 'c-red';
+  // Общий баланс = Bybit USDT + Прибыль в сделках (MP в ARS не конвертируем)
+  const bybitUsd   = bybit ? bybit.amount : 0;
+  const totalBalance = bybitUsd + (s.lockedInDeals || 0);
+  const totalCls   = totalBalance >= 0 ? 'c-green' : 'c-red';
+
+  // Форматирование времени обновления
+  function fmtUpd(iso) {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      return hh + ':' + mm;
+    } catch { return ''; }
+  }
+
+  // Карточки счетов
+  let accountsHtml = '<div class="accounts-row">';
+  if (bybit) {
+    accountsHtml += `
+      <div class="account-card bybit">
+        <div class="val c-green">${bybit.amount.toLocaleString('ru', {maximumFractionDigits:2})} USDT</div>
+        <div class="lbl">⚡ Bybit</div>
+        ${bybit.updatedAt ? `<div class="upd">обновлено ${fmtUpd(bybit.updatedAt)}</div>` : ''}
+      </div>`;
+  }
+  if (bybitArs && bybitArs.amount > 0) {
+    accountsHtml += `
+      <div class="account-card bybit">
+        <div class="val c-amber">${bybitArs.amount.toLocaleString('ru', {maximumFractionDigits:0})} ARS</div>
+        <div class="lbl">⚡ Bybit ARS</div>
+      </div>`;
+  }
+  if (mp) {
+    accountsHtml += `
+      <div class="account-card mp">
+        <div class="val" style="color:#00b1ea">${mp.amount.toLocaleString('ru', {maximumFractionDigits:0})} ARS</div>
+        <div class="lbl">💳 Mercado Pago</div>
+        ${mp.updatedAt ? `<div class="upd">обновлено ${fmtUpd(mp.updatedAt)}</div>` : ''}
+      </div>`;
+  }
+  if (!bybit && !mp) {
+    accountsHtml += `<div class="account-card" style="opacity:.5;grid-column:1/-1;font-size:12px;color:var(--hint)">Балансы Bybit и MP загружаются…</div>`;
+  }
+  accountsHtml += '</div>';
 
   let html = `
   <div class="stat-total">
     <div class="val ${totalCls}">${fmtSign(totalBalance)}</div>
-    <div class="lbl">⚖️ Общий баланс</div>
+    <div class="lbl">⚖️ Общий баланс (Bybit + сделки)</div>
   </div>
+  ${accountsHtml}
   <div class="stat-grid">
-    <div class="stat">
-      <div class="val ${cashCls}">${fmtUsd(s.cashUsd)}</div>
-      <div class="lbl">💵 Деньги сейчас</div>
-    </div>
     <div class="stat">
       <div class="val c-green">${fmtSign(s.lockedInDeals)}</div>
       <div class="lbl">💰 Прибыль в сделках</div>
