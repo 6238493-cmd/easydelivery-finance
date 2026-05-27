@@ -726,12 +726,15 @@ function renderDeals() {
       const isClosed    = String(d.status).includes('ЗАКРЫТ') || String(d.status).startsWith('9.');
       const typeClass   = isClosed ? 'closed' : d.type === 'Авиа' ? 'air' : 'cargo';
       const typeIcon    = d.type === 'Авиа' ? '✈️' : d.type === 'Карго' ? '📦' : '📋';
-      const pct         = d.expected > 0 ? Math.min(100, Math.round(d.received / d.expected * 100)) : 0;
+      const dealInTxs   = (D.transactions||[]).filter(t => String(t.dealId)===String(d.id) && t.direction==='Приход');
+      const dealReceived = dealInTxs.length > 0
+        ? dealInTxs.reduce((s,t) => s + (t.amtUsd||0), 0)
+        : (d.received||0);
+      const pct         = d.expected > 0 ? Math.min(100, Math.round(dealReceived / d.expected * 100)) : 0;
       const profitCls   = d.profit >= 0 ? 'c-green' : 'c-red';
       const shortStatus = String(d.status).replace(/^\d+\.\s*/, '');
       const subtitle    = d.type && d.type !== 'Карго' && d.type !== 'Авиа' ? escHtml(d.type) : '';
-
-      const clientOwes = Math.max(0, (d.expected||0) - (d.received||0));
+      const clientOwes  = Math.max(0, (d.expected||0) - dealReceived);
 
       html += `
         <div class="deal-card ${typeClass}" onclick="openDealDetail('${escHtml(d.id)}')" style="cursor:pointer">
@@ -977,7 +980,11 @@ function openDealDetail(dealId) {
 
   // ── Revenue (оплата клиента) ──────────────────────────
   const expected  = deal.expected  || 0;
-  const received  = deal.received  || 0;
+  // Считаем из живых транзакций (Приход), как и затраты — чтобы отражать реальные платежи
+  const inTxs     = allTxs.filter(t => t.direction === 'Приход');
+  const received  = inTxs.length > 0
+    ? inTxs.reduce((s, t) => s + (t.amtUsd || 0), 0)
+    : (deal.received || 0);
   const clientOwes = Math.max(0, expected - received);
   const recvPct   = expected > 0 ? Math.min(100, Math.round(received / expected * 100)) : 0;
 
