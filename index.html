@@ -328,12 +328,28 @@ h2:first-child { margin-top: 0; }
 
 /* ── Deal detail modal ──────────────────────────────────── */
 #dealDetailContainer .modal-overlay { z-index: 200; }
-.deal-detail-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;
+.deal-section-block {
+  background: rgba(255,255,255,.04); border-radius: 10px;
+  padding: 12px; margin-bottom: 10px;
 }
-.deal-detail-grid .stat { padding: 10px 8px; }
-.deal-detail-grid .val { font-size: 17px; }
-.deal-detail-grid .lbl { font-size: 10px; }
+.deal-section-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--hint); margin-bottom: 8px;
+}
+.deal-section-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; margin-bottom: 4px;
+}
+.deal-section-row:last-child { margin-bottom: 0; }
+.deal-profit-block {
+  background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.2);
+  border-radius: 10px; padding: 12px; margin-bottom: 14px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.deal-profit-col { text-align: center; }
+.deal-profit-col .lbl { font-size: 11px; color: var(--hint); margin-bottom: 3px; }
+.deal-profit-col .val { font-size: 20px; font-weight: 700; line-height: 1.1; }
+.progress-bar-red .progress-fill { background: var(--red); }
 
 /* ── Scroll fixes ───────────────────────────────────────── */
 ::-webkit-scrollbar { display: none; }
@@ -715,6 +731,8 @@ function renderDeals() {
       const shortStatus = String(d.status).replace(/^\d+\.\s*/, '');
       const subtitle    = d.type && d.type !== 'Карго' && d.type !== 'Авиа' ? escHtml(d.type) : '';
 
+      const clientOwes = Math.max(0, (d.expected||0) - (d.received||0));
+
       html += `
         <div class="deal-card ${typeClass}" onclick="openDealDetail('${escHtml(d.id)}')" style="cursor:pointer">
           <div class="deal-id">${typeIcon} ${escHtml(d.id)}</div>
@@ -725,7 +743,7 @@ function renderDeals() {
             <span class="c-hint">${fmtUsd(d.received)}/${fmtUsd(d.expected)}</span>
             <span class="${profitCls}">${d.profit ? fmtSign(d.profit) : ''}</span>
           </div>
-          ${d.spent > 0 ? `<div class="deal-nums" style="margin-top:2px"><span class="c-hint" style="font-size:10px">Закупка: ${fmtUsd(d.spent)}</span></div>` : ''}
+          ${clientOwes > 0 ? `<div class="deal-nums" style="margin-top:2px"><span style="font-size:10px;color:var(--amber)">⏳ Должен: ${fmtUsd(clientOwes)}</span></div>` : ''}
         </div>`;
     });
   });
@@ -955,24 +973,57 @@ async function saveEdit() {
 function openDealDetail(dealId) {
   const deal = (D.deals || []).find(d => String(d.id) === String(dealId));
   if (!deal) return;
-  const txs = (D.transactions || []).filter(t => String(t.dealId) === String(dealId));
+  const allTxs = (D.transactions || []).filter(t => String(t.dealId) === String(dealId));
 
-  const profitCls = (deal.profit || 0) >= 0 ? 'c-green' : 'c-red';
-  const pct = deal.expected > 0 ? Math.min(100, Math.round(deal.received / deal.expected * 100)) : 0;
+  // ── Revenue (оплата клиента) ──────────────────────────
+  const expected  = deal.expected  || 0;
+  const received  = deal.received  || 0;
+  const clientOwes = Math.max(0, expected - received);
+  const recvPct   = expected > 0 ? Math.min(100, Math.round(received / expected * 100)) : 0;
 
+  // ── Costs (затраты по сделке) ─────────────────────────
+  // totalCost = плановые затраты = expected - profit
+  const totalCost  = Math.max(0, expected - (deal.profit || 0));
+  // paidCost = сумма расходов из привязанных транзакций
+  const outTxs     = allTxs.filter(t => t.direction === 'Расход');
+  const paidCost   = outTxs.reduce((s, t) => s + (t.amtUsd || 0), 0);
+  const costLeft   = Math.max(0, totalCost - paidCost);
+  const costPct    = totalCost > 0 ? Math.min(100, Math.round(paidCost / totalCost * 100)) : 0;
+
+  // ── Profit ────────────────────────────────────────────
+  const plannedProfit = deal.profit || 0;
+  const actualSoFar   = received - paidCost; // сколько фактически «заработано» сейчас
+  const profitCls     = plannedProfit >= 0 ? 'c-green' : 'c-red';
+  const actualCls     = actualSoFar  >= 0 ? 'c-green' : 'c-red';
+
+  // ── Status ────────────────────────────────────────────
+  const shortStatus = String(deal.status || '').replace(/^\d+\.\s*/, '');
+
+  // ── Transaction list ──────────────────────────────────
   let txHtml = '';
-  if (!txs.length) {
-    txHtml = '<div class="c-hint" style="text-align:center;padding:16px 0">Транзакций по сделке нет</div>';
+  if (!allTxs.length) {
+    txHtml = `<div style="text-align:center;padding:14px 0;font-size:12px;color:var(--hint)">
+      Транзакций по сделке нет.<br>
+      <span style="opacity:.65;font-size:11px">Платежи привязываются автоматически, когда бот<br>сохраняет транзакцию с номером сделки.</span>
+    </div>`;
   } else {
-    txHtml = txs.map(t => {
-      const cls  = t.direction === 'Приход' ? 'c-green' : 'c-red';
-      const sign = t.direction === 'Приход' ? '+' : '-';
+    // sort by date desc
+    const sorted = [...allTxs].sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')));
+    txHtml = sorted.map(t => {
+      const isIn   = t.direction === 'Приход';
+      const cls    = isIn ? 'c-green' : 'c-red';
+      const sign   = isIn ? '+' : '−';
+      const meta   = [t.category, t.counterparty].filter(Boolean).join(' · ');
       return `<div class="history-row">
+        <div class="history-dir ${cls}" style="font-size:14px;min-width:14px">${sign}</div>
         <div class="history-main">
-          <div>${escHtml(t.category || '')}${t.counterparty ? ' · ' + escHtml(t.counterparty) : ''}</div>
-          <div class="c-hint" style="font-size:11px">${escHtml(t.description || '')} &nbsp; ${escHtml((t.date||'').substring(0,10))}</div>
+          <div style="font-size:13px;font-weight:600">${meta ? escHtml(meta) : escHtml(t.description||'Транзакция')}</div>
+          <div class="c-hint" style="font-size:11px;margin-top:1px">${[t.description && meta ? escHtml(t.description) : '', escHtml((t.date||'').substring(0,10))].filter(Boolean).join(' · ')}</div>
         </div>
-        <div class="${cls}" style="font-weight:700;white-space:nowrap">${sign}${t.amount} ${t.currency}</div>
+        <div class="${cls}" style="font-weight:700;white-space:nowrap;text-align:right">
+          <div>${sign}${escHtml(String(t.amount))} ${escHtml(t.currency)}</div>
+          <div style="font-size:11px;opacity:.6">${fmtUsd(t.amtUsd)}</div>
+        </div>
       </div>`;
     }).join('');
   }
@@ -980,20 +1031,66 @@ function openDealDetail(dealId) {
   const html = `
     <div class="modal-overlay" onclick="closeDealDetail()">
       <div class="modal-box" onclick="event.stopPropagation()">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <div style="font-weight:700;font-size:16px">${escHtml(deal.client)}</div>
-          <button onclick="closeDealDetail()" class="icon-btn" style="font-size:18px">✕</button>
+
+        <!-- Шапка -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px">
+          <div>
+            <div style="font-weight:700;font-size:17px">${escHtml(deal.client)}</div>
+            <div class="c-hint" style="font-size:12px;margin-top:2px">${escHtml(deal.id)} · ${escHtml(shortStatus)}</div>
+          </div>
+          <button onclick="closeDealDetail()" class="icon-btn" style="font-size:18px;margin-top:-4px">✕</button>
         </div>
-        <div class="c-hint" style="font-size:12px;margin-bottom:12px">${escHtml(deal.type || '')} · ${escHtml((deal.dateOpen||'').substring(0,10))}</div>
-        <div class="progress-bar" style="margin-bottom:12px"><div class="progress-fill" style="width:${pct}%"></div></div>
-        <div class="deal-detail-grid">
-          <div class="stat"><div class="val c-amber">${fmtUsd(deal.expected)}</div><div class="lbl">Итого к оплате</div></div>
-          <div class="stat"><div class="val c-green">${fmtUsd(deal.received)}</div><div class="lbl">Получено</div></div>
-          <div class="stat"><div class="val c-red">${fmtUsd(deal.spent)}</div><div class="lbl">Потрачено</div></div>
-          <div class="stat"><div class="val ${profitCls}">${fmtSign(deal.profit)}</div><div class="lbl">Прибыль</div></div>
+        <div style="font-size:11px;color:var(--hint);margin-bottom:14px">${escHtml(deal.type||'')}${deal.type&&deal.dateOpen?' · ':''}Открыта ${escHtml((deal.dateOpen||'').substring(0,10))}</div>
+
+        <!-- Оплата клиента -->
+        <div class="deal-section-label">💰 Оплата клиента</div>
+        <div class="deal-section-block">
+          <div class="deal-section-row">
+            <span style="color:var(--hint)">Сумма договора</span>
+            <span style="font-weight:700;font-size:15px;color:var(--amber)">${fmtUsd(expected)}</span>
+          </div>
+          <div class="progress-bar" style="margin:6px 0">
+            <div class="progress-fill" style="width:${recvPct}%"></div>
+          </div>
+          <div class="deal-section-row">
+            <span class="c-green">✓ Получено: <b>${fmtUsd(received)}</b></span>
+            <span style="color:var(--hint)">Долг клиента: <b style="color:${clientOwes>0?'var(--amber)':'var(--green)'}">${fmtUsd(clientOwes)}</b></span>
+          </div>
         </div>
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--hint);margin-bottom:8px">
-          Транзакции (${txs.length})
+
+        <!-- Затраты -->
+        <div class="deal-section-label">📦 Затраты по сделке</div>
+        <div class="deal-section-block">
+          <div class="deal-section-row">
+            <span style="color:var(--hint)">Плановые затраты</span>
+            <span style="font-weight:700;font-size:15px;color:var(--red)">${fmtUsd(totalCost)}</span>
+          </div>
+          <div class="progress-bar progress-bar-red" style="margin:6px 0">
+            <div class="progress-fill" style="width:${costPct}%"></div>
+          </div>
+          <div class="deal-section-row">
+            <span style="color:var(--red)">↙ Оплачено: <b>${fmtUsd(paidCost)}</b></span>
+            <span style="color:var(--hint)">Осталось: <b style="color:${costLeft>0?'var(--amber)':'var(--green)'}">${fmtUsd(costLeft)}</b></span>
+          </div>
+          ${allTxs.length===0&&totalCost>0?`<div style="font-size:10px;color:var(--hint);margin-top:6px;opacity:.7">* Считается по транзакциям с привязкой к сделке</div>`:''}
+        </div>
+
+        <!-- Прибыль -->
+        <div class="deal-profit-block">
+          <div class="deal-profit-col">
+            <div class="lbl">Плановая прибыль</div>
+            <div class="val ${profitCls}">${fmtSign(plannedProfit)}</div>
+          </div>
+          <div style="width:1px;height:36px;background:rgba(255,255,255,.1)"></div>
+          <div class="deal-profit-col">
+            <div class="lbl">Факт (получено − затраты)</div>
+            <div class="val ${actualCls}">${fmtSign(actualSoFar)}</div>
+          </div>
+        </div>
+
+        <!-- Транзакции -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--hint)">Транзакции (${allTxs.length})</div>
         </div>
         ${txHtml}
       </div>
