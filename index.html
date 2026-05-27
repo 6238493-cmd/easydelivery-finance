@@ -542,19 +542,14 @@ function renderSummary() {
       ${bybit.updatedAt ? `<div class="upd">${fmtUpd(bybit.updatedAt)}</div>` : ''}
     </div>`;
   }
-  if (bybitArs && bybitArs.amount > 0) {
-    accountsHtml += `<div class="account-card bybit">
-      <div class="val c-amber">${bybitArs.amount.toLocaleString('ru',{maximumFractionDigits:0})} ARS</div>
-      <div class="lbl">⚡ Bybit ARS</div>
-    </div>`;
-  }
-  if (mp && mp.amount > 0) {
-    accountsHtml += `<div class="account-card mp">
-      <div class="val" style="color:#00b1ea">${mp.amount.toLocaleString('ru',{maximumFractionDigits:2})} ARS</div>
-      <div class="lbl">💳 Mercado Pago</div>
-      ${mp.updatedAt ? `<div class="upd">${fmtUpd(mp.updatedAt)}</div>` : ''}
-    </div>`;
-  }
+  // MP — показываем всегда (баланс трекается из платежей)
+  const mpAmt = mp ? mp.amount : 0;
+  const mpUpd = mp ? fmtUpd(mp.updatedAt) : '';
+  accountsHtml += `<div class="account-card mp">
+    <div class="val" style="color:#00b1ea">${mpAmt.toLocaleString('ru',{maximumFractionDigits:2})} ARS</div>
+    <div class="lbl">💳 Mercado Pago</div>
+    ${mpUpd ? `<div class="upd">${mpUpd}</div>` : ''}
+  </div>`;
   if (!bybit && !mp) {
     accountsHtml += `<div class="account-card" style="opacity:.5;grid-column:1/-1;text-align:center;font-size:12px;color:var(--hint)">Балансы загружаются…</div>`;
   }
